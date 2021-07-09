@@ -1,0 +1,184 @@
+#======================================================================================
+# Author: Sean Cavany
+# project: Outbreak response
+# Year: 2019
+# 
+# Code to analyze the output of the agent based model following space spraying
+#
+# Files needed:
+#======================================================================================
+library(lattice)
+library(stringr)
+library(vioplot)
+library(viridis)
+library(gridExtra)
+library(fields)
+directory <- "~/Documents/zika_project/shelter_in_place/abm_output/"
+foi.outname <- "foi"
+suffixes <- c("/", "_2/")
+
+n.sims <- 400
+n.batches <- length(suffixes)
+yearly.cats <- 8
+none.cats <- 5
+monthly.cats <- 12
+n.cats <- c(yearly.cats,rep(monthly.cats,4))
+shelter.list <- list(list(),list(),list(),list(),list())
+names(shelter.list) <- c("yearly","monthly.low","monthly.high","monthly.med","monthly.0708")
+names(n.cats) <- names(shelter.list)
+
+##analysis - load output
+setwd(directory)
+load("scripts/shelter_analysis_year.RData",verbose=T)
+output.list <- list(tot.output[[1]],mon.output[[1]],mon.output[[2]],mon.output[[3]],mon.output[[4]])
+names(output.list) <- names(shelter.list)
+
+##setup plots ========================================
+if(!file.exists("figures")){dir.create("figures")}
+
+for (j in 1:length(n.cats)) {
+    cats <- n.cats[j]
+    for (i in seq(cats)) {
+        shelter.list[[names(n.cats)[j]]][[i]] <- output.list[[names(n.cats)[j]]][i,,1]
+    }
+}
+
+shelter.list.bites <- list()
+for (i in seq(n.cats[1])) {
+    shelter.list.bites[[i]] <- tot.bites.output[[1]][i,,1]
+}
+
+
+none.list <- list()
+for (i in seq(none.cats)) {
+    none.list[[i]] <- none.output[i,,1]
+}
+all.list <- list()
+for (i in seq(none.cats)) {
+    all.list[[i]] <- all.output[i,,1]
+}
+
+none.list.bites <- list()
+for (i in seq(none.cats)) {
+    none.list.bites[[i]] <- none.bites.output[i,,1]
+}
+all.list.bites <- list()
+for (i in seq(none.cats)) {
+    all.list.bites[[i]] <- all.bites.output[i,,1]
+}
+
+## plot vioplots =========================
+
+## tiff("figures/yearly_incidence.tif", width = 6*600, height =6*600,
+##      compression="lzw", res=600,pointsize=10)
+## par(mfrow=c(2,2), mar = 0.1+c(3,2,2,1),oma=c(2,2,0,0))
+## for (i in 1:none.cats) {
+##     vioplot(list(none.list[[i]],shelter.list[["yearly"]][[i]],
+##                  shelter.list[["yearly"]][[i+none.cats]],
+##                  all.list[[i]]),
+##             names=c("None", "2 mths", "3 mths","All"),
+##             col=c("white",viridis(2),"dark gray"),
+##             ylab="",
+##             xlab="",
+##             asp=1)
+##     if(i %in% c(1,3)){
+##         mtext("Infections",2,3)
+##     } 
+##     if(i %in% c(4,3)){
+##         mtext("Lockdown length",1,3)
+##     } 
+##     title(paste0("200",i,"-0",i+1))
+## }
+## dev.off()
+
+## lapply(none.list,function(x)quantile(x,c(0.25,0.5,0.75)))
+## lapply(shelter.list[["yearly"]][1:4],function(x)quantile(x,c(0.25,0.5,0.75)))
+## lapply(shelter.list[["yearly"]][5:8],function(x)quantile(x,c(0.25,0.5,0.75)))
+## lapply(all.list,function(x)quantile(x,c(0.25,0.5,0.75)))
+
+## tiff("figures/yearly_incidence_bites.tif", width = 6*600, height =6*600,
+##      compression="lzw", res=600,pointsize=10)
+## par(mfrow=c(2,2), mar = 0.1+c(3,2,2,1),oma=c(2,2,0,0))
+## for (i in 1:none.cats) {
+##     vioplot(list(none.list.bites[[i]],shelter.list.bites[[i]],
+##                  shelter.list.bites[[i+none.cats]],
+##                  all.list.bites[[i]]),
+##             names=c("None", "2 mths", "3 mths","All"),
+##             col=c("white",viridis(2),"dark gray"),
+##             ylab="",
+##             xlab="",
+##             asp=1)
+##     if(i %in% c(1,3)){
+##         mtext("Total bites",2,3)
+##     } 
+##     if(i %in% c(4,3)){
+##         mtext("Lockdown length",1,3)
+##     } 
+##     title(paste0("200",i,"-0",i+1))
+## }
+## dev.off()
+
+
+## Monthly
+tiff("figures/monthly_incidence.tif", width = 6.93*600, height=6.93*600,
+     compression="lzw", res=600,pointsize=10)
+par(mfrow=c(3,1), mar = 0.1+c(3,2,2,1),oma=c(2,2,0,0))
+vioplot(c(shelter.list[["monthly.low"]][1:12],list(none.list[[5]])),#list(all.list[[5]])),
+        names=c("Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun",""),#"All"),
+        col=c(rev(viridis(7))[1:6],viridis(7)[1:6],"white"),
+        ylab="",
+        xlab="",
+        asp=1)
+title(main = "Low scenario")
+mtext("Infections",2,3)
+abline(v=12.5,lty="dashed")
+vioplot(c(shelter.list[["monthly.med"]][1:12],list(none.list[[1]])),
+        names=c("Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun",""),
+        col=c(rev(viridis(7))[1:6],viridis(7)[1:6],"white"),
+        ylab="",
+        xlab="",
+        asp=1)
+title(main = "High scenario")
+mtext("Infections",2,3)
+abline(v=12.5,lty="dashed")
+vioplot(c(shelter.list[["monthly.high"]][1:12],list(none.list[[2]])),
+        names=c("Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun",""),
+        col=c(rev(viridis(7))[1:6],viridis(7)[1:6],"white"),
+        ylab="",
+        xlab="",
+        asp=1)
+title(main = "Serotype invasion scenario")
+abline(v=12.5,lty="dashed")
+mtext("Infections",2,3)
+mtext("Month of lockdown",1,3,at=6.5)
+mtext("No",1,1.5,at=13)
+mtext("Lockdown",1,3,at=13)
+dev.off()
+
+lapply(shelter.list[["monthly.high"]],function(x)quantile(x,c(0.025,0.5,0.975)))
+quantile(all.list[[1]],c(0.025,0.5,0.975))
+
+## tiff("figures/all_vs_nothing.tif", width = 4*600, height =4*600,
+##      compression="lzw", res=600)
+## par(mar = 0.1+c(3,2,2,0))
+## vioplot(list(none.output.allyrs, all.output),
+##         names=c("None", "Always"),
+##         ylab="",
+##         xlab="",
+##         asp=1)
+## dev.off()
+
+## 07-08 season
+tiff("figures/monthly_incidence_0708.tif", width = 6.93*600, height=6.93*300,
+     compression="lzw", res=600,pointsize=10)
+par(mfrow=c(1,1), mar = 0.1+c(3,2,2,1),oma=c(2,2,0,0))
+vioplot(shelter.list[["monthly.0708"]][1:12],
+        names=c("Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun"),
+        col=c(rev(viridis(7))[1:6],viridis(7)[1:6]),
+        ylab="",
+        xlab="",
+        asp=1)
+title(main = "07-08")
+mtext("Infections",2,3)
+mtext("Month of lockdown",1,3,at=6.5)
+dev.off()

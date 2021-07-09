@@ -1,0 +1,186 @@
+library(fields)
+library(rgdal)
+library(viridis)
+library(GISTools)  
+library(data.table)
+library(colorspace)
+
+x <- readOGR("zonas35_ge.shp")
+## tiff("~/Desktop/poster_figures/iquitos_numbered_big.tif", res=600,
+##      width=4500, height=4500, units="px",
+##      compression="lzw")
+## x@plotOrder <- 1:35
+cols <- viridis(1000)[1:1000]
+dif.cols.base <- viridis(2)[1:2]
+zonal.areas <- unlist(lapply(x@polygons,function(y)y@area/1e6))
+
+load("./shelter_analysis_spatial_processed.RData",verbose=T)
+load("./locs_new.RData",verbose=T)
+locs.new[,zone:=substr(location,1,2)]
+
+## incidence and mosquito color extremese
+min.moz.col <- min(floor(moz.locs$mosquitoes/length(cols))*length(cols))
+max.moz.col <- max(ceiling(moz.locs$mosquitoes/length(cols))*length(cols))
+min.inc.col <- min(c(floor(none.sum$mean/length(cols))*length(cols),
+                     floor(all.sum$mean/length(cols))*length(cols)))
+max.inc.col <- max(c(ceiling(none.sum$mean/length(cols))*length(cols),
+                     ceiling(all.sum$mean/length(cols))*length(cols)))
+min.inc.col.2002 <- min(c(floor(none.sum$mean/length(cols))*length(cols),
+                          floor(yrly.sum$mean/length(cols))*length(cols)))
+max.inc.col.2002 <- max(c(ceiling(none.sum$mean/length(cols))*length(cols),
+                          ceiling(yrly.sum$mean/length(cols))*length(cols)))
+
+## mosquito and difference color vectors
+moz.cols <- cols[floor(1+length(cols)*(moz.locs$mosquitoes-min.moz.col)/(max.moz.col-min.moz.col))]
+non.cols <- cols[floor(1+length(cols)*(none.sum$mean-min.inc.col)/(max.inc.col-min.inc.col))]
+all.cols <- cols[floor(1+length(cols)*(all.sum$mean-min.inc.col)/(max.inc.col-min.inc.col))]
+non.cols.2002 <- cols[floor(1+length(cols)*(none.sum$mean-min.inc.col.2002)
+                      /(max.inc.col.2002-min.inc.col.2002))]
+yrly.cols <- cols[floor(1+length(cols)*(yrly.sum$mean-min.inc.col.2002)/(max.inc.col.2002-min.inc.col.2002))]
+
+min.dif.col <- min(floor((-none.sum$mean + all.sum$mean)/length(cols))*length(cols))
+max.dif.col <- max(ceiling((-none.sum$mean + all.sum$mean)/length(cols))*length(cols))
+dif.cols.vec <- c(lighten(dif.cols.base[1],
+                          amount=seq(0,0.75,
+                                     length.out=length(cols)*abs(min.dif.col)
+                                     /(abs(min.dif.col)+max.dif.col))),
+                  rev(darken(dif.cols.base[2],
+                             amount=seq(0,0.5,
+                                        length.out=length(cols)*abs(max.dif.col)
+                                        /(abs(min.dif.col)+max.dif.col)))))
+dif.cols <- dif.cols.vec[length(cols)*(-none.sum$mean+all.sum$mean-min.dif.col)
+                         /(max.dif.col-min.dif.col)]
+min.dif.col.2002 <- min(floor((-none.sum$mean + yrly.sum$mean)/length(cols))*length(cols))
+max.dif.col.2002 <- max(ceiling((-none.sum$mean + yrly.sum$mean)/length(cols))*length(cols))
+dif.cols.vec.2002 <- c(lighten(dif.cols.base[1],
+                          amount=seq(0,0.75,
+                                     length.out=length(cols)*abs(min.dif.col.2002)
+                                     /(abs(min.dif.col.2002)+max.dif.col.2002))),
+                       rev(darken(dif.cols.base[2],
+                                  amount=seq(0,0.5,
+                                             length.out=length(cols)*abs(max.dif.col.2002)
+                                             /(abs(min.dif.col.2002)+max.dif.col.2002)))))
+dif.cols.2002 <- dif.cols.vec.2002[length(cols)*(-none.sum$mean+yrly.sum$mean-min.dif.col.2002)
+                                   /(max.dif.col.2002-min.dif.col.2002)]
+
+## houses per zone colors
+house.per.zone.vector <- table(locs.new$zone)[1:35]
+min.house.col <- min(floor(house.per.zone.vector/length(cols))*length(cols))
+max.house.col <- max(ceiling(house.per.zone.vector/length(cols))*length(cols))
+house.cols <- cols[floor(1+length(cols)*(house.per.zone.vector-min.house.col)/(max.house.col-min.house.col))]
+
+## population per zone colors
+pop.per.zone.vector <- locs.new[,.(total.pop=sum(inhabitants)),by=zone][1:35,total.pop]
+min.pop.col <- min(floor(pop.per.zone.vector/length(cols))*length(cols))
+max.pop.col <- max(ceiling(pop.per.zone.vector/length(cols))*length(cols))
+pop.cols <- cols[floor(1+length(cols)*(pop.per.zone.vector-min.pop.col)/(max.pop.col-min.pop.col))]
+
+## time per zone colors
+compliance <- 0.7
+time.per.zone.vector <- locs.new[,.(weighted.time=compliance*sum(inhabitants)+(1-compliance)*sum(total.time)),by=zone
+                                 ][1:35,weighted.time]
+min.time.col <- min(floor(time.per.zone.vector/length(cols))*length(cols))
+max.time.col <- max(ceiling(time.per.zone.vector/length(cols))*length(cols))
+time.cols <- cols[floor(1+length(cols)*(time.per.zone.vector-min.time.col)/(max.time.col-min.time.col))]
+
+## area
+area.per.zone.vector <- zonal.areas*1e6
+min.area.col <- min(floor(area.per.zone.vector/length(cols))*length(cols))
+max.area.col <- max(ceiling(area.per.zone.vector/length(cols))*length(cols))
+area.cols <- cols[floor(1+length(cols)*(area.per.zone.vector-min.area.col)/(max.area.col-min.area.col))]
+plot(x,col=area.cols)
+title("Area")
+image.plot(legend.only=TRUE,zlim=c(min.area.col,max.area.col),
+           col=cols)
+
+## pop density
+density.per.zone.vector <- house.per.zone.vector/zonal.areas
+min.density.col <- min(floor(density.per.zone.vector/length(cols))*length(cols))
+max.density.col <- max(ceiling(density.per.zone.vector/length(cols))*length(cols))
+density.cols <- cols[floor(1+length(cols)*(density.per.zone.vector-min.density.col)/(max.density.col-min.density.col))]
+
+## change in total time spent
+lockdown.vec <- time.per.zone.vector
+baseline.vec <- locs.new[,sum(total.time), by=zone]$V1[1:35]
+min.diftime.col <- min(floor((-baseline.vec + lockdown.vec)/length(cols))*length(cols))
+max.diftime.col <- max(ceiling((-baseline.vec + lockdown.vec)/length(cols))*length(cols))
+diftime.cols.vec <- c(lighten(dif.cols.base[1],
+                              amount=seq(0,0.75,
+                                         length.out=length(cols)*abs(min.diftime.col)
+                                         /(abs(min.diftime.col)+max.diftime.col))),
+                      rev(darken(dif.cols.base[2],
+                                 amount=seq(0,0.5,
+                                            length.out=length(cols)*abs(max.diftime.col)
+                                            /(abs(min.diftime.col)+max.diftime.col)))))
+diftime.cols <- diftime.cols.vec[length(cols)*(-baseline.vec+lockdown.vec-min.diftime.col)
+                                 /(max.diftime.col-min.diftime.col)]
+
+## tiff("../figures/lockdown_maps_all_v_none.tif", width = 8*600, height =4*600,
+##      compression="lzw", res=600)
+## par(mfrow=c(1,2), mar=0.1+c(1,1,4,4),
+##     oma = c(0,0,0,3))
+## plot(x,col=dif.cols)
+## title("Difference in incidence")
+## image.plot(legend.only=TRUE,zlim=c(min.dif.col,max.dif.col),
+##            col=dif.cols.vec)
+## plot(x,col=moz.cols)
+## title("Mosquito abundance")
+## image.plot(legend.only=TRUE,zlim=c(min.moz.col,max.moz.col),
+##            col=cols)
+## GISTools::map.scale(xc=coordinates(x)[25,1], yc=coordinates(x)[34,2],
+##                     len=3000, units="km",
+##                     ndivs=3)
+## dev.off()
+
+## tiff("../figures/lockdown_maps_all_v_none.tif", width = 8*600, height =4*600,
+##      compression="lzw", res=600)
+## par(mfrow=c(1,2), mar=0.1+c(1,1,4,4),
+##     oma = c(0,0,0,3))
+## plot(x,col=dif.cols)
+## title("Difference in incidence")
+## image.plot(legend.only=TRUE,zlim=c(min.dif.col,max.dif.col),
+##            col=dif.cols.vec)
+## plot(x,col=moz.cols)
+## title("Mosquito abundance")
+## image.plot(legend.only=TRUE,zlim=c(min.moz.col,max.moz.col),
+##            col=cols)
+## GISTools::map.scale(xc=coordinates(x)[25,1], yc=coordinates(x)[34,2],
+##                     len=3000, units="km",
+##                     ndivs=3)
+## dev.off()
+
+
+tiff("../figures/Fig3.tif", width = 8*600, height =8*600,
+     compression="lzw", res=600,pointsize=10)
+par(mfrow=c(2,2), mar=0.1+c(0,0,0,8),
+    oma = c(0,0,0,0))
+plot(x,col=dif.cols.2002)
+mtext(expression(bold("A. Difference in incidence")),side=3,line=-2.5,adj=0.05)
+image.plot(legend.only=TRUE,zlim=c(min.dif.col.2002,max.dif.col.2002),
+           col=dif.cols.vec.2002)
+plot(x,col=moz.cols)
+mtext(expression(bold("B. Average mosquito abundance")),side=3,line=-2.5,adj=0.05)
+image.plot(legend.only=TRUE,zlim=c(min.moz.col,max.moz.col),
+           col=cols)
+plot(x,col=density.cols)
+mtext(expression(bold("C. Population density /km"^"2")),side=3,line=-2.5,adj=0.05)
+image.plot(legend.only=TRUE,zlim=c(min.density.col,max.density.col),
+           col=cols)
+plot(x,col=diftime.cols)
+##title("D. Difference in person-days",adj=0)
+mtext(expression(bold("D. Difference in total person-days")),side=3,line=-2.5,adj=0.05)
+image.plot(legend.only=TRUE,zlim=c(min.diftime.col,max.diftime.col),
+           col=diftime.cols.vec)
+GISTools::map.scale(xc=coordinates(x)[25,1], yc=coordinates(x)[34,2],
+                    len=3000, units="km",
+                    ndivs=3)
+dev.off()
+   
+## correlations
+cor(-none.sum$mean + yrly.sum$mean,moz.locs$mosquitoes)
+cor(none.sum$mean,moz.locs$mosquitoes)
+cor(yrly.sum$mean,moz.locs$mosquitoes)
+cor(-none.sum$mean + yrly.sum$mean,density.per.zone.vector)
+cor(-baseline.vec + lockdown.vec,moz.locs$mosquitoes)
+cor(-none.sum$mean + yrly.sum$mean,-baseline.vec + lockdown.vec)
+

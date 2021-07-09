@@ -1,0 +1,12 @@
+#===================================================
+# Parameters controlling the effect of fever on human movement
+# stage_end_days refers to the last day for each period of movement change (assumed to start on day 0)
+# home_proportion is the proporiton of time spent at home in each period
+# locs_prportion is the prporption of regular locs which they visit in each period.
+# baseline_home_prop is the time spent at home in Schaber et al, PNTDs, 2019 (60%)
+#=====================================================
+
+stage_end_days = 
+home_proportion = 
+locs_proportion = 
+baseline_home_prop = 

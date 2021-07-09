@@ -1,0 +1,10 @@
+# Executable
+DengueSim
+
+# Compiled Object files
+*.o
+
+# Large files
+#birthdeath_15.csv
+trajectories_15.txt
+#synthetic_locations.csv

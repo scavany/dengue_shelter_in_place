@@ -1,0 +1,14 @@
+#====================================================
+# Parameters controlling genetic aspects of the model
+# loci_of_interest lists the loci which are being included in the simulation (do not leave space after comma)
+# heterozygous_protection lists the relative protection of heterozygous genotypes if resistance loci are included
+# if loci governs resistance, name must match a name on outbreak_response.txt
+# 			  this parameter does nothing for other loci
+# initial_homozyg_pos is the initial proportion that are homozygous positive at the locus
+# initial_homozyg_neg is the initial proportion that are homozygous negative at the locus
+#=====================================================
+
+loci_of_interest = ulv,tirs
+heterozygous_protection = 0.1,0.1
+initial_homozyg_neg = 0.49,0.49
+initial_homozyg_pos = 0.09,0.09
